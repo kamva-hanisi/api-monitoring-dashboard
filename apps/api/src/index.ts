@@ -108,6 +108,5 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   res.status(500).json({ error: 'Internal server error' });
 });
 
-const port = Number(process.env.PORT ?? 4000);
-const server = app.listen(port, () => console.log(`API ready at http://localhost:${port}`));
-process.on('SIGTERM', () => server.close(() => prisma.$disconnect()));
+export { app };
+

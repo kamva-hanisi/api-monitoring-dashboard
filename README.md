@@ -55,3 +55,12 @@ after a request can lose the metric. The retry logic retries GET/HEAD/OPTIONS/PU
 but not POST. Retry safety still depends on endpoint semantics.
 
 See `docs/architecture.md`, `docs/api.yaml`, and `docs/performance-benchmark.md`.
+
+## Phase 3 additions
+
+- Supertest HTTP endpoint tests with mocked database
+- Playwright browser smoke test (run separately)
+- Database benchmarking instructions in `docs/phase3-testing.md`
+- API entrypoint split into `src/index.ts` (importable app) and `src/server.ts` (listener)
+
+Run `npm install` after extraction. These additions are **not yet validated on your Windows environment**.
