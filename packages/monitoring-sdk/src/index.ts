@@ -29,23 +29,22 @@ export class MonitoringClient {
     try {
       const response = await fetch(url, init);
       statusCode = response.status;
-
       return response;
     } finally {
-      const durationMs = Math.round(
-        performance.now() - start
-      );
-
       const metrics: RequestMetrics = {
         method,
         url,
         statusCode,
-        durationMs,
+        durationMs: Math.round(performance.now() - start),
         success: statusCode >= 200 && statusCode < 400,
         timestamp: new Date().toISOString(),
       };
 
-      this.options.onRequest?.(metrics);
+      try {
+        this.options.onRequest?.(metrics);
+      } catch (error) {
+        console.error("Monitoring callback failed:", error);
+      }
     }
   }
 }

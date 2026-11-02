@@ -31,6 +31,49 @@ app.post('/api/services', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+
+const requestLogSchema = z.object({
+  serviceId: z.string().min(1),
+  method: z.string().min(1).max(10),
+  path: z.string().min(1).max(2048),
+  statusCode: z.number().int().min(0).max(599),
+  durationMs: z.number().int().min(0),
+});
+
+app.post('/api/requests', async (req, res, next) => {
+  try {
+    const parsed = requestLogSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      res.status(400).json({
+        error: 'Invalid request metrics',
+        details: parsed.error.flatten(),
+      });
+      return;
+    }
+
+    const service = await prisma.service.findUnique({
+      where: { id: parsed.data.serviceId },
+    });
+
+    if (!service) {
+      res.status(404).json({
+        error: 'Service not found',
+      });
+      return;
+    }
+
+    const requestLog = await prisma.requestLog.create({
+      data: parsed.data,
+    });
+
+    res.status(201).json(requestLog);
+  } catch (error) {
+    next(error);
+  }
+});
+
+
 app.get('/api/overview', async (_req, res, next) => {
   try {
     const [services, totalRequests, failedRequests, aggregate, recent] = await Promise.all([
@@ -50,6 +93,7 @@ app.get('/api/overview', async (_req, res, next) => {
       recent
     });
   } catch (err) { next(err); }
+  
 });
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

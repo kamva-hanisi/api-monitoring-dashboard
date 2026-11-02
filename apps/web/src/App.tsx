@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Activity, AlertTriangle, ArrowUpRight, Clock3, Database, Plus, RefreshCw, Server, ShieldCheck } from 'lucide-react';
+import { monitoringClient } from "./monitoring";
 
 type Service = { id: string; name: string; endpoint: string; status: string; createdAt: string };
 type Log = { id: string; method: string; path: string; statusCode: number; durationMs: number; createdAt: string; service: { name: string } };
@@ -7,7 +8,7 @@ type Overview = { services: number; totalRequests: number; failedRequests: numbe
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
 async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${API}${path}`);
+  const res = await monitoringClient.request(`${API}${path}`);
   if (!res.ok) throw new Error(`Request failed (${res.status})`);
   return res.json() as Promise<T>;
 }
