@@ -1,0 +1,62 @@
+openapi: 3.0.3
+info:
+  title: Pulseboard API
+  version: 0.2.0
+servers:
+  - url: http://localhost:4000
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        '200': { description: OK }
+  /api/services:
+    get:
+      summary: List registered services
+      responses:
+        '200': { description: Services }
+    post:
+      summary: Register service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, endpoint]
+              properties:
+                name: { type: string }
+                endpoint: { type: string, format: uri }
+      responses:
+        '201': { description: Created }
+        '400': { description: Invalid input }
+  /api/requests:
+    post:
+      summary: Record request metric
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [serviceId, method, path, statusCode, durationMs]
+              properties:
+                serviceId: { type: string }
+                method: { type: string }
+                path: { type: string }
+                statusCode: { type: integer }
+                durationMs: { type: integer }
+      responses:
+        '201': { description: Created }
+        '400': { description: Invalid input }
+        '404': { description: Unknown service }
+  /api/overview:
+    get:
+      summary: Overview metrics and latest request logs
+      responses:
+        '200': { description: Summary }
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      responses:
+        '200': { description: Prometheus text exposition }

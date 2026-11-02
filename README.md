@@ -1,48 +1,57 @@
 # Pulseboard — API Monitoring Dashboard
 
-**Phase 1: Foundation** — React 19 + TypeScript + Vite, Express 5 + TypeScript, PostgreSQL + Prisma.
+Full-stack React 19 + TypeScript + Express + Prisma + PostgreSQL developer portfolio project.
 
-## Prerequisites
-- Node.js 20.19+ (Node 22 recommended)
-- npm 10+
-- Docker Desktop (or an existing PostgreSQL 16 server)
+## Quick start (Windows / Git Bash)
 
-## Run locally
-1. Start PostgreSQL: `docker compose up -d db`
-2. Copy `apps/api/.env.example` to `apps/api/.env`.
-3. Copy `apps/web/.env.example` to `apps/web/.env` (optional; defaults to localhost:4000).
-4. Run `npm install` from the repository root.
-5. Run `npm run db:generate -w @monitor/api`.
-6. Run `npm run db:migrate -w @monitor/api -- --name init`.
-7. Run `npm run dev`.
-8. Open http://localhost:5173.
+Prerequisites: Node.js 22, npm, Docker Desktop.
 
-The API runs at http://localhost:4000; check http://localhost:4000/api/health.
+1. `docker compose up -d db`
+2. `cp apps/api/.env.example apps/api/.env`
+3. `npm install`
+4. `npm run db:generate -w @monitor/api`
+5. `npm run db:migrate -w @monitor/api -- --name init`
+6. `npm run dev`
+7. Open http://localhost:5173
 
-## What works in Phase 1
-- Responsive dashboard with overview cards, services list, and request log table.
-- PostgreSQL schema for services and request logs.
-- List and create services (with Zod validation).
-- Overview counts and average latency based on stored request logs.
-- Error states and manual refresh.
+**Database host port is 5433** to avoid the Windows PostgreSQL port 5432 conflict.
+The API remains on port 4000.
 
-## Not implemented yet
-- Request ingestion, SDK, and telemetry instrumentation (Phase 2).
-- Real time-series charts: the activity bars are a clearly marked visual placeholder.
-- Authentication, background health checks, automatic polling, tests, and CI/CD (later phases).
-- Service endpoint URL is stored, not fetched by the server in Phase 1.
+Register a service in the dashboard, then select it from
+**Track dashboard API requests under**. Refresh to record SDK requests.
+The selected service is only a label for dashboard-originated requests,
+not proof that an external endpoint is being actively monitored.
 
-## API endpoints
-- `GET /api/health`
-- `GET /api/services`
-- `POST /api/services` body: `{ "name": "Payments API", "endpoint": "https://example.com" }`
-- `GET /api/overview`
+## Verification
 
-## Build / type check
-`npm run typecheck`
-`npm run build`
+- `npm run typecheck`
+- `npm test`
+- `npm run build`
+- API: http://localhost:4000/api/health
+- Prometheus: http://localhost:4000/metrics
 
-## Project layout
-- `apps/web`: React frontend
-- `apps/api`: Express backend and Prisma schema
-- `docs`: implementation notes
+## Implemented in source
+
+- Service registration and persistence
+- Request ingestion and dashboard summaries
+- Typed TypeScript SDK with timeout, safe-method retries, exponential backoff
+- Automatic SDK reporting for dashboard requests (opt-in selection)
+- Recent-request latency line chart
+- Prometheus instrumentation for backend requests
+- Latest-100-request p95 and p99 calculations
+- Initial SDK, API utility, and frontend tests
+- GitHub Actions typecheck/test/build workflow
+- OpenAPI spec and architecture documentation
+
+## Important limitations
+
+This is a development scaffold, not production-ready SaaS. No user authentication,
+service-level access control, ingestion keys, retention, or production deployment.
+The SDK does not continuously poll third-party endpoints. CI must be confirmed in
+GitHub and benchmark claims require measured results.
+
+The monitoring callback does not await reporting; a page closing immediately
+after a request can lose the metric. The retry logic retries GET/HEAD/OPTIONS/PUT/DELETE
+but not POST. Retry safety still depends on endpoint semantics.
+
+See `docs/architecture.md`, `docs/api.yaml`, and `docs/performance-benchmark.md`.
