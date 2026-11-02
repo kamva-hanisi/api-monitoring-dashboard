@@ -1,0 +1,84 @@
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { Activity, AlertTriangle, ArrowUpRight, Clock3, Database, Plus, RefreshCw, Server, ShieldCheck } from 'lucide-react';
+
+type Service = { id: string; name: string; endpoint: string; status: string; createdAt: string };
+type Log = { id: string; method: string; path: string; statusCode: number; durationMs: number; createdAt: string; service: { name: string } };
+type Overview = { services: number; totalRequests: number; failedRequests: number; errorRate: number; avgLatencyMs: number; recent: Log[] };
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+
+async function getJson<T>(path: string): Promise<T> {
+  const res = await fetch(`${API}${path}`);
+  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  return res.json() as Promise<T>;
+}
+
+export default function App() {
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState('');
+  const [endpoint, setEndpoint] = useState('');
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    try {
+      const [o, s] = await Promise.all([getJson<Overview>('/api/overview'), getJson<Service[]>('/api/services')]);
+      setOverview(o); setServices(s); setError('');
+    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load data'); }
+    finally { setBusy(false); }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  async function addService(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true);
+    try {
+      const res = await fetch(`${API}/api/services`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, endpoint })
+      });
+      if (!res.ok) {
+        const body: { error?: string } = await res.json();
+        throw new Error(body.error ?? 'Could not add service');
+      }
+      setName(''); setEndpoint(''); setShowForm(false); await load();
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not add service'); }
+    finally { setBusy(false); }
+  }
+
+  return <div className="shell">
+    <aside className="sidebar">
+      <div className="brand"><div className="brand-icon"><Activity size={23}/></div><span>pulseboard<span className="brand-dot">.</span></span></div>
+      <div className="nav-label">WORKSPACE</div>
+      <div className="nav-item selected"><Activity size={18}/> Overview</div>
+      <div className="nav-item"><Server size={18}/> Services</div>
+      <div className="nav-item"><Database size={18}/> Request logs</div>
+      <div className="sidebar-bottom"><span className="status-dot"/> Local development <div className="small-muted">Phase 1 · Foundation</div></div>
+    </aside>
+    <main className="main">
+      <header className="topbar"><div className="breadcrumbs">Workspace <span>/</span> <strong>Overview</strong></div><div className="top-right"><span className="live-pill"><span className="status-dot"/> Connected to local API</span><button className="icon-button" onClick={() => void load()} disabled={busy} aria-label="Refresh data"><RefreshCw size={17}/></button></div></header>
+      <div className="content">
+        <div className="heading"><div><div className="eyebrow">MONITORING OVERVIEW</div><h1>API Overview</h1><p>Monitor your services and request activity in one place.</p></div><button className="primary" onClick={() => setShowForm(v => !v)}><Plus size={17}/> Add service</button></div>
+        {error && <div role="alert" className="error"><AlertTriangle size={17}/> {error} <button onClick={() => void load()}>Retry</button></div>}
+        {showForm && <form className="service-form" onSubmit={e => void addService(e)}><label>Service name<input required minLength={2} maxLength={80} value={name} onChange={e => setName(e.target.value)} placeholder="Payments API"/></label><label>Endpoint URL<input required type="url" value={endpoint} onChange={e => setEndpoint(e.target.value)} placeholder="https://api.example.com"/></label><button className="primary" type="submit" disabled={busy}>Save service</button></form>}
+        <div className="stats">
+          <Stat icon={<Server size={19}/>} label="Total services" value={overview?.services ?? '—'} note="Registered services"/>
+          <Stat icon={<Activity size={19}/>} label="Total requests" value={overview?.totalRequests ?? '—'} note="All recorded requests"/>
+          <Stat icon={<Clock3 size={19}/>} label="Avg. latency" value={overview ? `${overview.avgLatencyMs} ms` : '—'} note="Across all requests"/>
+          <Stat icon={<ShieldCheck size={19}/>} label="Error rate" value={overview ? `${overview.errorRate}%` : '—'} note="HTTP 5xx responses"/>
+        </div>
+        <div className="panel-grid">
+          <section className="panel"><div className="panel-heading"><div><h2>Request activity</h2><p>Recent request events will appear here.</p></div><span className="subtle-pill">Foundation</span></div><div className="empty-graph"><div className="graph-bars">{[35,47,38,61,44,72,55,65,48,82,69,92,76,63,84,70,95,78,87,72].map((n,i)=><span key={i} style={{height:`${n}%`}}/>)}</div><div className="graph-note">Chart placeholder · Live time-series metrics arrive in Phase 2</div></div></section>
+          <section className="panel"><div className="panel-heading"><div><h2>Registered services</h2><p>Your monitored endpoints</p></div><span className="subtle-pill">{services.length} total</span></div><div className="services">{services.length ? services.map(s=><div className="service-row" key={s.id}><span className="service-icon"><Server size={17}/></span><div><strong>{s.name}</strong><div className="endpoint">{s.endpoint}</div></div><ArrowUpRight size={16} className="muted"/></div>) : <div className="empty-services"><Server size={29}/><strong>No services yet</strong><p>Add your first service to get started.</p></div>}</div></section>
+        </div>
+        <section className="panel logs"><div className="panel-heading"><div><h2>Recent requests</h2><p>Latest recorded API calls</p></div><span className="subtle-pill">Last 100</span></div><div className="table-scroll"><table><thead><tr><th>Service</th><th>Method</th><th>Path</th><th>Status</th><th>Latency</th><th>Time</th></tr></thead><tbody>{overview?.recent.length ? overview.recent.map(r=><tr key={r.id}><td>{r.service.name}</td><td>{r.method}</td><td>{r.path}</td><td><span className={r.statusCode >= 500 ? 'bad' : 'good'}>{r.statusCode}</span></td><td>{r.durationMs} ms</td><td>{new Date(r.createdAt).toLocaleString()}</td></tr>) : <tr><td className="empty-table" colSpan={6}>No request logs yet. Ingestion will be implemented in Phase 2.</td></tr>}</tbody></table></div></section>
+        <footer>Pulseboard · Built with React, TypeScript, Express and PostgreSQL</footer>
+      </div>
+    </main>
+  </div>;
+}
+function Stat({ icon, label, value, note }: { icon: React.ReactNode; label: string; value: string | number; note: string }) {
+  return <div className="stat"><div className="stat-top"><span>{label}</span><span className="stat-icon">{icon}</span></div><div className="stat-value">{value}</div><div className="stat-note">{note}</div></div>;
+}
