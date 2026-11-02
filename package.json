@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @monitor/api\" \"npm run dev -w @monitor/web\"",
     "build": "npm run build -w @monitor/sdk && npm run build -w @monitor/api && npm run build -w @monitor/web",
-    "typecheck": "npm run typecheck -w @monitor/sdk && npm run typecheck -w @monitor/api && npm run typecheck -w @monitor/web",
+    "typecheck": "npm run build -w @monitor/sdk && npm run typecheck -w @monitor/sdk && npm run typecheck -w @monitor/api && npm run typecheck -w @monitor/web",
     "test": "npm run test -w @monitor/sdk && npm run test -w @monitor/api && npm run test -w @monitor/web",
     "lint": "npm run typecheck"
   },
